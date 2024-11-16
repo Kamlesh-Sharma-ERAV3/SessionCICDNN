@@ -98,12 +98,17 @@ def train():
     print(f'Average loss: {avg_loss:.4f}')
     print(f'Training accuracy: {final_accuracy:.2f}%')
     
-    # Save model with timestamp and accuracy
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Save model with standardized name
     if not os.path.exists('models'):
         os.makedirs('models')
-    model_path = f'models/mnist_model_{timestamp}_acc{final_accuracy:.1f}.pth'
-    torch.save(model.state_dict(), model_path)
+    
+    # Save current model
+    model_path = f'models/mnist_model_latest.pth'
+    torch.save({
+        'state_dict': model.state_dict(),
+        'accuracy': final_accuracy,
+        'timestamp': datetime.now().strftime("%Y%m%d_%H%M%S")
+    }, model_path)
     print(f"Model saved to {model_path}")
     return model
 

@@ -9,6 +9,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    # Download previous best model if it exists
+    - name: Download previous best model
+      uses: actions/download-artifact@v4
+      continue-on-error: true
+      with:
+        name: best-model
+        path: models/
+    
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -39,9 +47,10 @@ jobs:
       run: |
         pytest -v -s test_model.py
     
-    - name: Archive model artifacts
+    # Archive best model
+    - name: Archive best model
       uses: actions/upload-artifact@v4
       with:
-        name: trained-model
-        path: models/
+        name: best-model
+        path: models/mnist_model_best.pth
         retention-days: 90

@@ -5,6 +5,7 @@ from train import SimpleCNN
 import glob
 import pytest
 from tqdm import tqdm
+import os
 
 def get_latest_model():
     model_files = glob.glob('models/mnist_model_*.pth')
@@ -22,6 +23,33 @@ def get_device():
             return torch.device("cpu")
     return torch.device("cpu")
 
+def get_best_model():
+    """Get the model with the highest accuracy or create new if none exists"""
+    best_model_path = 'models/mnist_model_best.pth'
+    latest_model_path = 'models/mnist_model_latest.pth'
+    
+    if not os.path.exists(latest_model_path):
+        return None, None
+        
+    latest_checkpoint = torch.load(latest_model_path)
+    latest_accuracy = latest_checkpoint['accuracy']
+    
+    # If best model doesn't exist or latest is better, update best
+    if not os.path.exists(best_model_path):
+        torch.save(latest_checkpoint, best_model_path)
+        return latest_model_path, latest_accuracy
+        
+    best_checkpoint = torch.load(best_model_path)
+    best_accuracy = best_checkpoint['accuracy']
+    
+    if latest_accuracy > best_accuracy:
+        print(f"\nNew best model found! Accuracy: {latest_accuracy:.2f}% (previous: {best_accuracy:.2f}%)")
+        torch.save(latest_checkpoint, best_model_path)
+        return latest_model_path, latest_accuracy
+    else:
+        print(f"\nKeeping previous best model. Best accuracy: {best_accuracy:.2f}% (current: {latest_accuracy:.2f}%)")
+        return best_model_path, best_accuracy
+
 def test_model_architecture():
     model = SimpleCNN()
     
@@ -35,7 +63,7 @@ def test_model_architecture():
     assert total_params < 25000, f"Model has {total_params} parameters, should be less than 25000"
 
 def test_model_accuracy():
-    print("\n" + "="*70)  # Add a separator line
+    print("\n" + "="*70)
     print("RUNNING MODEL ACCURACY TEST")
     print("="*70 + "\n")
     
@@ -49,13 +77,14 @@ def test_model_accuracy():
     test_dataset = datasets.MNIST('./data', train=False, download=True, transform=transform)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1000)
     
-    # Load latest model
-    model_path = get_latest_model()
-    assert model_path is not None, "No trained model found"
+    # Load best model
+    model_path, best_accuracy = get_best_model()
+    assert model_path is not None, "No model found"
     print(f"Using model: {model_path}")
     
     model = SimpleCNN().to(device)
-    model.load_state_dict(torch.load(model_path))
+    checkpoint = torch.load(model_path)
+    model.load_state_dict(checkpoint['state_dict'])
     model.eval()
     
     correct = 0
