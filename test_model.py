@@ -10,6 +10,18 @@ def get_latest_model():
     model_files = glob.glob('models/mnist_model_*.pth')
     return max(model_files) if model_files else None
 
+def get_device():
+    if torch.backends.mps.is_available():
+        try:
+            # Test MPS availability with a small tensor
+            device = torch.device("mps")
+            torch.zeros(1).to(device)
+            return device
+        except:
+            print("Warning: MPS (Metal) device found but unusable, falling back to CPU")
+            return torch.device("cpu")
+    return torch.device("cpu")
+
 def test_model_architecture():
     model = SimpleCNN()
     
@@ -27,7 +39,7 @@ def test_model_accuracy():
     print("RUNNING MODEL ACCURACY TEST")
     print("="*70 + "\n")
     
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    device = get_device()
     
     # Load test dataset
     transform = transforms.Compose([

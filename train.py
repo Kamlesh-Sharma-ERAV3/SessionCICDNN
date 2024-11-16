@@ -30,9 +30,21 @@ class SimpleCNN(nn.Module):
         x = self.fc2(x)
         return x
 
+def get_device():
+    if torch.backends.mps.is_available():
+        try:
+            # Test MPS availability with a small tensor
+            device = torch.device("mps")
+            torch.zeros(1).to(device)
+            return device
+        except:
+            print("Warning: MPS (Metal) device found but unusable, falling back to CPU")
+            return torch.device("cpu")
+    return torch.device("cpu")
+
 def train():
     # Set device
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    device = get_device()
     print(f"Using device: {device}")
     
     # Load MNIST dataset
