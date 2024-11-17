@@ -7,10 +7,67 @@ import os
 import ssl
 import urllib.request
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+import torchvision.utils as vutils
+import numpy as np
+import albumentations as A
+import cv2
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
+transform = A.Compose([
+    A.Rotate(limit=30, p=1.0),
+    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=1.0),
+    A.GaussNoise(var_limit=(10.0, 50.0), p=1.0),
+    A.RandomCrop(width=80, height=80, p=1.0),
+])
 
+def load_and_preprocess_image(image_path):
+    image = cv2.imread(image_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    # Apply augmentation with fixed random state
+    A.ReplayCompose.seed = 42  # Set seed before augmentation
+    augmented = transform(image=image)
+    augmented_image = augmented['image']
+    
+    return augmented_image
+
+def show_augmented_images(dataset, num_images=10):
+    """Display a grid of original and augmented images"""
+    # Create a figure with two rows
+    fig, axes = plt.subplots(2, num_images, figsize=(20, 4))
+    
+    # Get some random training images
+    dataiter = iter(torch.utils.data.DataLoader(dataset, batch_size=num_images))
+    images, labels = next(dataiter)
+    
+    # Show original images
+    for idx in range(num_images):
+        ax = axes[0][idx]
+        ax.imshow(images[idx].squeeze(), cmap='gray')
+        ax.axis('off')
+        if idx == 0:
+            ax.set_title('Original', y=-0.2)
+    
+    # Get another batch for augmented images
+    images, labels = next(dataiter)
+    
+    # Show augmented images
+    for idx in range(num_images):
+        ax = axes[1][idx]
+        ax.imshow(images[idx].squeeze(), cmap='gray')
+        ax.axis('off')
+        if idx == 0:
+            ax.set_title('Augmented', y=-0.2)
+    
+    plt.tight_layout()
+    
+    # Save the plot
+    if not os.path.exists('outputs'):
+        os.makedirs('outputs')
+    plt.savefig('outputs/augmented_samples.png')
+    plt.close()
 
 class SimpleCNN(nn.Module):
     def __init__(self):
@@ -101,19 +158,33 @@ def count_parameters(model):
     return total_params, trainable_params, param_details
 
 def train():
-    # Set device
     device = get_device()
     print(f"Using device: {device}")
     
-    # Load MNIST dataset
-    transform = transforms.Compose([
+    # Define augmentation transforms
+    train_transform = transforms.Compose([
+        transforms.RandomRotation(10),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ])
     
+    # Simple transform for visualization
+    viz_transform = transforms.Compose([
+        transforms.RandomRotation(10),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+        transforms.ToTensor(),
+    ])
+    
     print("Loading MNIST dataset...")
-    train_dataset = datasets.MNIST('./data', train=True, download=True, transform=transform)
+    train_dataset = datasets.MNIST('./data', train=True, download=True, transform=train_transform)
+    viz_dataset = datasets.MNIST('./data', train=True, download=True, transform=viz_transform)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+    
+    # Show and save augmented images
+    print("\nGenerating augmented image samples...")
+    show_augmented_images(viz_dataset)
+    print("Augmented samples saved to outputs/augmented_samples.png")
     
     # Initialize model
     model = SimpleCNN().to(device)
@@ -188,6 +259,25 @@ def train():
     }, model_path)
     print(f"Model saved to {model_path}")
     return model
+
+# Debug code to visualize augmentation
+def visualize_augmentation(image_path):
+    original = cv2.imread(image_path)
+    original = cv2.cvtColor(original, cv2.COLOR_BGR2RGB)
+    
+    augmented = transform(image=original)['image']
+    
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.title('Original')
+    plt.imshow(original)
+    plt.axis('off')
+    
+    plt.subplot(1, 2, 2)
+    plt.title('Rotated')
+    plt.imshow(augmented)
+    plt.axis('off')
+    plt.show()
 
 if __name__ == "__main__":
     train() 
