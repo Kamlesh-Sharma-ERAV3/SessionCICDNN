@@ -1,6 +1,6 @@
 # PyTorch MNIST CNN Pipeline
 
-![ML Pipeline](https://github.com/<your-username>/<repo-name>/workflows/ML%20Pipeline/badge.svg)
+![ML Pipeline](https://github.com/Kamlesh-Sharma-ERAV3/SessionCICDNN/workflows/ML%20Pipeline/badge.svg)
 
 A robust machine learning pipeline implementing a lightweight Convolutional Neural Network (CNN) for MNIST digit classification. The project includes automated training, testing, and CI/CD integration.
 
